@@ -36,8 +36,7 @@ __set_alphabet_values('oi', 0)
 __set_alphabet_values('l', 1)
 
 
-_default_generator: 'TSIDCreator'
-_default_generator_lock: threading.Lock = threading.Lock()
+_default_generator: 'TSIDGenerator'
 
 
 @functools.total_ordering
@@ -219,25 +218,28 @@ class TSID:
         """Returns a new TSID.
 
            This static method is a quick alternative to
-           `TSIDCreator::create()`.
+           `TSIDGenerator::create()`.
 
            It can generate up to `2^22` (`4,194,304`) TSIDs per millisecond.
            It can be useful, for example, for logging.
 
            Security-sensitive applications that require a cryptographically
-           secure pseudo-random generator should use `TSIDCreator::create()`.
+           secure pseudo-random generator should use `TSIDGenerator::create()`.
 
-           > Note this method is not thread safe.
+           > Note this method is not thread safe by default. It's the
+           TSIDGenerator responsibility to ensure thread safety.
 
-        >>> TSID.create().random == 1
+        >>> a = TSID.create()
+        >>> b = TSID.create()
+        >>> c = TSID.create()
+        >>> a.number < b.number < c.number
         True
-        >>> TSID.create().random == 2
+        >>> a.datetime == b.datetime == c.datetime
         True
-        >>> TSID.create().random == 3
+        >>> a.random < b.random < c.random
         True
         """
-        with _default_generator_lock:
-            return _default_generator.create()
+        return _default_generator.create()
 
     @staticmethod
     def from_bytes(bytes: bytes) -> 'TSID':
@@ -298,12 +300,22 @@ class TSID:
                     raise ValueError(f"Invalid format: '{format}'")
         return TSID(number)
 
+    @staticmethod
+    def set_default_generator(generator: 'TSIDGenerator') -> None:
+        """Sets the default TSID generator.
+
+        >>> generator: TSIDGenerator = TSIDGenerator(node=1)
+        >>> TSID.set_default_generator(generator)
+        """
+        global _default_generator
+        _default_generator = generator
+
 
 def _rnd_generator() -> int:
     return int(random() * 0xffffffff)
 
 
-class TSIDCreator:
+class TSIDGenerator:
     def __init__(
         self,
         node: int | None = None,
@@ -311,7 +323,7 @@ class TSIDCreator:
         epoch: datetime | None = None,
         random_fn: t.Callable[[], int] | None = None
     ) -> None:
-        """Creates a new TSID creator.
+        """Creates a new TSID generator.
 
         Args:
         - `node` int | None: Node identifier. Defaults to None.
@@ -339,25 +351,27 @@ class TSIDCreator:
         self._counter_bits: int = RANDOM_BITS - node_bits
         self._counter_mask: int = RANDOM_MASK >> node_bits
         self._node_mask: int = RANDOM_MASK >> self._counter_bits
+        
+        self._lock = threading.Lock()
 
     def create(self) -> TSID:
         """
         >>> ### Test node extraction ------------------------------
-        >>> tc = TSIDCreator(node=255, node_bits=8)
+        >>> tc = TSIDGenerator(node=255, node_bits=8)
         >>> t = tc.create()
         >>> ((t.number & RANDOM_MASK) >> tc._counter_bits) == 255
         True
-        >>> tc = TSIDCreator(node=64, node_bits=8)
+        >>> tc = TSIDGenerator(node=64, node_bits=8)
         >>> t = tc.create()
         >>> ((t.number & RANDOM_MASK) >> tc._counter_bits) == 64
         True
-        >>> tc = TSIDCreator(node=512, node_bits=10)
+        >>> tc = TSIDGenerator(node=512, node_bits=10)
         >>> t = tc.create()
         >>> ((t.number & RANDOM_MASK) >> tc._counter_bits) == 512
         True
 
         >>> ### Test counter extraction ------------------------------
-        >>> tc = TSIDCreator(node=64, node_bits=8, random_fn=lambda: 0)
+        >>> tc = TSIDGenerator(node=64, node_bits=8, random_fn=lambda: 0)
         >>> t = tc.create()
         >>> t.number & tc._counter_mask == 1
         True
@@ -366,7 +380,7 @@ class TSIDCreator:
         True
 
         >>> ### Test random extraction ------------------------------
-        >>> tc = TSIDCreator(node=0, node_bits=0, random_fn=lambda: 0)
+        >>> tc = TSIDGenerator(node=0, node_bits=0, random_fn=lambda: 0)
         >>> t = tc.create()
         >>> t.random == 1
         True
@@ -380,30 +394,30 @@ class TSIDCreator:
         >>> (t.datetime - datetime.now()).total_seconds() < 1
         True
         """
+        with self._lock:
+            current_millis: float = datetime.now().timestamp() * 1000
 
-        current_millis: float = datetime.now().timestamp() * 1000
+            reset_counter: bool = False
 
-        reset_counter: bool = False
+            # If not in the same millisecond, reset counter
+            if current_millis > self._millis:
+                self.counter += 1
 
-        # If not in the same millisecond, reset counter
-        if current_millis > self._millis:
-            self.counter += 1
-
-            # If the counter overflows, go to the next millisecond
-            if self.counter >> self._counter_bits != 0:
+                # If the counter overflows, go to the next millisecond
+                if self.counter >> self._counter_bits != 0:
+                    reset_counter = True
+                    self._millis += 1
+            else:
                 reset_counter = True
-                self._millis += 1
-        else:
-            reset_counter = True
-            self._millis = current_millis
+                self._millis = current_millis
 
-        if reset_counter:
-            self.counter = self.random_fn() & self._counter_mask
+            if reset_counter:
+                self.counter = self.random_fn() & self._counter_mask
 
-        millis = int(self._millis - _TSID_EPOCH_MILLIS) << RANDOM_BITS
-        node = (self.node & self._node_mask) << self._counter_bits
-        counter = self.counter & self._counter_mask
-        return TSID(millis + node + counter)
+            millis = int(self._millis - _TSID_EPOCH_MILLIS) << RANDOM_BITS
+            node = (self.node & self._node_mask) << self._counter_bits
+            counter = self.counter & self._counter_mask
+            return TSID(millis + node + counter)
 
 
-_default_generator = TSIDCreator(node=0, node_bits=0, random_fn=lambda: 0)
+_default_generator =TSIDGenerator(node=0, node_bits=0)
