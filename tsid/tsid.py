@@ -1,13 +1,13 @@
 
 import functools
 import threading
-
 import typing as t
 
 from datetime import datetime, timedelta
 from random import random
 
 from .basen import decode, encode
+
 
 TSID_BYTES: int = 8
 TSID_CHARS: int = 13
@@ -114,18 +114,20 @@ class TSID:
         """
         return self.__number
 
-    def __lt__(self, __value: object) -> bool:
+    def __lt__(self, other: object) -> bool:
         """
         >>> TSID(0) < TSID(1)
+        True
+        >>> TSID(1) > TSID(0)
         True
         >>> TSID(0) < 1000
         False
         """
-        if isinstance(__value, TSID):
-            return self.__number < __value.__number
+        if isinstance(other, TSID):
+            return self.__number < other.__number
         return False
 
-    def __eq__(self, __value: object) -> bool:
+    def __eq__(self, other: object) -> bool:
         """
         >>> TSID(0) == TSID(0)
         True
@@ -134,8 +136,8 @@ class TSID:
         >>> TSID(0) != '0'
         True
         """
-        if isinstance(__value, TSID):
-            return self.__number == __value.__number
+        if isinstance(other, TSID):
+            return self.__number == other.__number
         return False
 
     def __repr__(self) -> str:
@@ -166,7 +168,7 @@ class TSID:
         return self.__number.to_bytes(TSID_BYTES, byteorder='big',
                                       signed=False)
 
-    def to_string(self, format: str | None = None) -> str:
+    def to_string(self, fmt: str = 'S') -> str:
         """Converts the TSID into a string.
 
            Supports the following formats:
@@ -196,24 +198,25 @@ class TSID:
         '000000000000A'
         """
 
-        if format is None:
-            return str(self)
+        result: str
 
-        match format:
+        match fmt:
             case 'S':  # canonical string in upper case
-                return self._to_canonical_string()
+                result = self._to_canonical_string()
             case 's':  # canonical string in lower case
-                return self._to_canonical_string().lower()
+                result = self._to_canonical_string().lower()
             case 'X':  # hexadecimal in upper case
-                return encode(self.number, 16, min_length=TSID_BYTES*2)
+                result = encode(self.number, 16, min_length=TSID_BYTES*2)
             case 'x':  # hexadecimal in lower case
-                return encode(self.number, 16, min_length=TSID_BYTES*2).lower()
+                result = encode(self.number, 16, min_length=TSID_BYTES*2).lower()
             case 'd':  # base-10
-                return encode(self.number, 10)
+                result = encode(self.number, 10)
             case 'z':  # base-62
-                return encode(self.number, 62)
+                result = encode(self.number, 62)
             case _:
-                raise ValueError(f"Invalid format: '{format}'")
+                raise ValueError(f"Invalid format: '{fmt}'")
+        
+        return result
 
     def _to_canonical_string(self) -> str:
         return ''.join(ALPHABET[self.__number >> i & 0x1f]
@@ -268,7 +271,7 @@ class TSID:
         return TSID(number)
 
     @staticmethod
-    def from_string(string: str, format: str | None = None) -> 'TSID':
+    def from_string(value: str, fmt: str = 'S') -> 'TSID':
         """Converts a string into a TSID.
 
            Supports the following formats:
@@ -286,24 +289,23 @@ class TSID:
         """
         number: int
 
-        if format is None or format in ('S', 's'):
-            if len(string) != TSID_CHARS:
-                raise ValueError("Invalid TSID string")
+        match fmt:
+            case 'S' | 's':
+                if len(value) != TSID_CHARS:
+                    raise ValueError("Invalid TSID string")
+                number = sum(ALPHABET_VALUES[ord(value[i])] << h
+                            for i, h in enumerate(range(60, -5, -5), 0))
+            case 'X':  # hexadecimal in upper case
+                number = decode(value, 16)
+            case 'x':  # hexadecimal in lower case
+                number = decode(value.upper(), 16)
+            case 'd':  # base-10
+                number = decode(value, 10)
+            case 'z':  # base-62
+                number = decode(value, 62)
+            case _:
+                raise ValueError(f"Invalid format: '{fmt}'")
 
-            number = sum(ALPHABET_VALUES[ord(string[i])] << h
-                         for i, h in enumerate(range(60, -5, -5), 0))
-        else:
-            match format:
-                case 'X':  # hexadecimal in upper case
-                    number = decode(string, 16)
-                case 'x':  # hexadecimal in lower case
-                    number = decode(string.upper(), 16,)
-                case 'd':  # base-10
-                    number = decode(string, 10)
-                case 'z':  # base-62
-                    number = decode(string, 62)
-                case _:
-                    raise ValueError(f"Invalid format: '{format}'")
         return TSID(number)
 
     @staticmethod
@@ -315,10 +317,6 @@ class TSID:
         """
         global _default_generator
         _default_generator = generator
-
-
-def _rnd_generator() -> int:
-    return int(random() * 0xffffffff)
 
 
 class TSIDGenerator:
@@ -342,10 +340,10 @@ class TSIDGenerator:
                              stdlib `random.random()` is used to return a
                              random integer.
 
-        >>> generator = TSIDGenerator(node=1, node_bits=100)
+        >>> generator = TSIDGenerator(node=1, node_bits=21)
         Traceback (most recent call last):
         ...
-        ValueError: Too many node_bits
+        ValueError: Invalid node_bits: 21
 
         >>> generator = TSIDGenerator(node=1, node_bits=0)
         Traceback (most recent call last):
@@ -365,10 +363,10 @@ class TSIDGenerator:
         if node is not None and node < 0:
             raise ValueError(f'Invalid node: {node}')
 
-        if node_bits < 0:
+        if node_bits < 0 or node_bits > 20:
             raise ValueError(f'Invalid node_bits: {node_bits}')
 
-        self.random_fn = random_fn or _rnd_generator
+        self.random_fn = random_fn or (lambda: int(random() * 0xffffffff))
 
         self.counter: int = self.random_fn()
 
@@ -379,13 +377,11 @@ class TSIDGenerator:
             self.node = node
 
         if self.node >> node_bits > 0:
-            raise ValueError(f'Node {self.node} too large for node_bits=={node_bits}')
+            raise ValueError(f'Node {self.node} too large for '
+                             f'node_bits=={node_bits}')
 
         self._node_bits: int = node_bits
         self._counter_bits: int = RANDOM_BITS - node_bits
-
-        if self._counter_bits <= 0:
-            raise ValueError(f'Too many node_bits')
 
         self.epoch: datetime = epoch or TSID_EPOCH
         self._millis: float = datetime.now().timestamp() * 1000
@@ -460,4 +456,4 @@ class TSIDGenerator:
             return TSID(millis + node + counter)
 
 
-_default_generator =TSIDGenerator(node_bits=0)
+_default_generator = TSIDGenerator(node_bits=0)
