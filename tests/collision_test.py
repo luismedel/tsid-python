@@ -30,16 +30,18 @@ class CreationThread(threading.Thread):
                 print(f'Err: {t.number}')
                 return
 
-            for format in ['s', 'S', 'x', 'X', 'd', 'z']:
-                s = t.to_string(format)
-                if s in scache:
-                    print(f'Collision str({format}) {s}')
-                    return
+            for fmt in ['s', 'S', 'x', 'X', 'd', 'z']:
+                s: str = t.to_string(fmt)
 
-                scache.add(s)
-                t2 = TSID.from_string(t.to_string(format), format)
+                key: str = f'{fmt}-{s}'
+                if key in scache:
+                    print(f'Collision {key}')
+                    return
+                scache.add(key)
+
+                t2: TSID = TSID.from_string(t.to_string(fmt), fmt)
                 if t2 != t:
-                    print(f'Err str({format}): {t.to_string(format)}')
+                    print(f'Err str({fmt}): {t.to_string(fmt)}')
 
 
 def main(loops: int, thread_count: int) -> None:
