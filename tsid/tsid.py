@@ -140,7 +140,7 @@ class TSID:
         return False
 
     def __repr__(self) -> str:
-        return self.__str__()
+        return self._to_canonical_string()
 
     def __str__(self) -> str:
         return self._to_canonical_string()
@@ -215,8 +215,8 @@ class TSID:
                        for i in range(60, -5, -5))
 
     @staticmethod
-    def fast() -> 'TSID':
-        """Returns a fast new TSID.
+    def create() -> 'TSID':
+        """Returns a new TSID.
 
            This static method is a quick alternative to
            `TSIDCreator::create()`.
@@ -227,13 +227,13 @@ class TSID:
            Security-sensitive applications that require a cryptographically
            secure pseudo-random generator should use `TSIDCreator::create()`.
 
-           > Note this methof is not thread safe.
+           > Note this method is not thread safe.
 
-        >>> TSID.fast().random == 1
+        >>> TSID.create().random == 1
         True
-        >>> TSID.fast().random == 2
+        >>> TSID.create().random == 2
         True
-        >>> TSID.fast().random == 3
+        >>> TSID.create().random == 3
         True
         """
         with _default_generator_lock:

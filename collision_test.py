@@ -11,7 +11,7 @@ class CreationThread(threading.Thread):
 
     def run(self):
         while True:
-            t: TSID = TSID.fast()
+            t: TSID = TSID.create()
             if t.number in cache:
                 print(f"Collision ({self.count}): {t.number} {t.random} {t.datetime} {datetime.now()}")
             else:
