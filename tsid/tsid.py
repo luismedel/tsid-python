@@ -400,7 +400,7 @@ class TSIDGenerator:
             reset_counter: bool = False
 
             # If not in the same millisecond, reset counter
-            if current_millis > self._millis:
+            if int(current_millis) == int(self._millis):
                 self.counter += 1
 
                 # If the counter overflows, go to the next millisecond
