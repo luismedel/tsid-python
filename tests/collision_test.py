@@ -1,7 +1,7 @@
 import argparse
 import threading
 
-from tsid import TSID
+from tsidpy import TSID
 
 
 DEFAULT_LOOPS = 100000

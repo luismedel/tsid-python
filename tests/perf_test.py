@@ -3,7 +3,7 @@ import threading
 import typing as t
 from uuid import uuid4
 
-from tsid import TSID
+from tsidpy import TSID
 
 
 DEFAULT_LOOPS = 100000
