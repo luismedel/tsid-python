@@ -6,9 +6,8 @@ This library is a port of the original Java code by [Fabio Lima](https://github.
 
 ## Installation
 
-```bash
-pip install tsidpy
-```
+> Note: to be deployed to PyPI.
+
 
 ## What is a TSID?
 
