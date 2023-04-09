@@ -7,7 +7,7 @@ This library is a port of the original Java code by [Fabio Lima](https://github.
 ## Installation
 
 ```bash
-pip install tsid
+pip install tsid-python
 ```
 
 ## What is a TSID?

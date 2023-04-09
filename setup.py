@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name="tsid",
+    name="tsid-python",
     maintainer="Luis Medel",
     maintainer_email="luis@luismedel.com",
     description="A Python library for generating Time-Sorted Unique Identifiers (TSID)",
