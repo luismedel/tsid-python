@@ -12,7 +12,7 @@ setup(
     description="A Python library for generating Time-Sorted Unique Identifiers (TSID)",
     url="https://github.com/luismedel/tsid-python",
     license="MIT",
-    version="1.0.0.0",
+    version="1.0.0.1",
     packages=["tsidpy"],
     long_description=long_description,
     long_description_content_type='text/markdown'
