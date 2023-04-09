@@ -1,4 +1,7 @@
 
+clean:
+	rm -rf dist build tsidpy.egg-info
+
 build:
 	python3 -m build
 
