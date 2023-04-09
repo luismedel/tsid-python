@@ -101,14 +101,14 @@ Create a TSID as a `str`:
 
 ```python
 >>> str(TSID.create())
-0C04Q2BR40003
+'0C04Q2BR40003'
 ```
 
 Create a TSID as an hexadecimal `str`:
 
 ```python
 >>> TSID.create().to_string('x')
-06009712f0400003
+'06009712f0400003'
 ```
 
 > Note: TSID generators are [thread-safe](https://en.wikipedia.org/wiki/Thread_safety).
