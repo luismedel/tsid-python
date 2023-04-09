@@ -87,6 +87,8 @@ Related with the [original library](https://github.com/f4b6a3/tsid-creator):
 Create a TSID:
 
 ```python
+from tsid import TSID
+
 tsid: TSID = TSID.create()
 ```
 
@@ -118,6 +120,7 @@ Create a TSID as an hexadecimal `str`:
 The `TSID::number` property simply unwraps the internal `int` value of a TSID.
 
 ```python
+>>> from tsid import TSID
 >>> TSID.create(432511671823499267).number
 432511671823499267
 ```
@@ -152,6 +155,7 @@ Sequence of TSIDs:
 The `TSID::to_string()` method encodes a TSID as a [Crockford's base 32](https://www.crockford.com/base32.html) string. The returned string is 13 characters long.
 
 ```python
+>>> from tsid import TSID
 >>> tsid: str = TSID.create().to_string()
 '0C04Q2BR40004'
 ```
@@ -195,6 +199,8 @@ The string format can be useful for languages that store numbers in [IEEE 754 do
 Create a TSID using the default generator:
 
 ```python
+from tsid import TSID
+
 tsid: TSID = TSID.create()
 ```
 
@@ -203,6 +209,8 @@ tsid: TSID = TSID.create()
 Create a TSID from a canonical string (13 chars):
 
 ```python
+from tsid import TSID
+
 tsid: TSID = TSID.from_string('0123456789ABC')
 ```
 
@@ -242,6 +250,7 @@ A `TSIDGenerator` that creates TSIDs similar to [Twitter Snowflakes](https://git
 - Counter uses 12 bits and starts at `0` (max: 4095 values per millisecond)
 
 ```python
+from tsid import TSID, TSIDGenerator
 
 datacenter: int = 1
 worker: int = 1
@@ -265,6 +274,8 @@ A `TSIDGenerator` that creates TSIDs similar to [Discord Snowflakes](https://dis
 - Counter uses 12 bits and starts at a random value.
 
 ```python
+from tsid import TSID, TSIDGenerator
+
 worker: int = 1
 process: int = 1
 node: int = worker << 5 | process
@@ -299,6 +310,8 @@ tsid: TSID = discord_generator.create()
 When creating a `TSIDGenerator`, remember you can't use a node id greater than `2^node_bits - 1`. For example, if you need to use a node id greater than 7, you need to use more than 3 bits for the node id:
 
 ```python
+from tsid import TSIDGenerator
+
 gen0 = TSIDGenerator(node=0, node_bis=3)  # ok
 gen1 = TSIDGenerator(node=1, node_bis=3)  # ok
 ...
