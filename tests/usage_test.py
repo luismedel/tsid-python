@@ -1,7 +1,7 @@
 import time
 from datetime import datetime
 
-from tsid import TSID
+from tsidpy import TSID
 
 
 dt: datetime | None = None
