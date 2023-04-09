@@ -433,21 +433,16 @@ class TSIDGenerator:
         with self._lock:
             current_millis: float = datetime.now().timestamp() * 1000
 
-            reset_counter: bool = False
-
-            # If not in the same millisecond, reset counter
+            # If same millisecond, increment counter
             if int(current_millis) == int(self._millis):
                 self.counter += 1
 
                 # If the counter overflows, go to the next millisecond
                 if self.counter >> self._counter_bits != 0:
-                    reset_counter = True
                     self._millis += 1
+                    self.counter = 0
             else:
-                reset_counter = True
                 self._millis = current_millis
-
-            if reset_counter:
                 self.counter = self.random_fn() & self._counter_mask
 
             millis = int(self._millis - _TSID_EPOCH_MILLIS) << RANDOM_BITS
