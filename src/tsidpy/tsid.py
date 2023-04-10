@@ -1,19 +1,19 @@
 
 import functools
+import random
 import threading
+import time
 import typing as t
 
-from datetime import datetime, timedelta
-from random import random
+from datetime import datetime
 
 from .basen import decode, encode
-
 
 TSID_BYTES: int = 8
 TSID_CHARS: int = 13
 
-TSID_EPOCH: datetime = datetime.fromisoformat("2020-01-01")
-_TSID_EPOCH_MILLIS = int(TSID_EPOCH.timestamp() * 1000)
+_EPOCH_ISO: str = '2020-01-01 00:00:00+00:00'
+TSID_EPOCH: float = datetime.fromisoformat(_EPOCH_ISO).timestamp() * 1000
 
 RANDOM_BITS: int = 22
 RANDOM_MASK: int = 0x3fffff
@@ -72,23 +72,28 @@ class TSID:
         True
         """
         self.__number: int = number & 0xffffffffffffffff  # 64-bit
+        self._epoch: float = TSID_EPOCH
 
     @property
-    def datetime(self, epoch: datetime | None = None) -> datetime:
-        """Returns the time component of the TSID.
+    def timestamp(self) -> float:
+        """Returns the timestamp component of the TSID.
+           The timestamp is the number of milliseconds elapsed
+           since the TSID epoch.
 
-        >>> TSID(0).datetime == TSID_EPOCH
+        >>> TSID(0).timestamp == TSID_EPOCH
         True
-        >>> delta = timedelta(milliseconds=1)
-        >>> TSID(1 << RANDOM_BITS).datetime == TSID_EPOCH + delta
+        >>> TSID.create().timestamp - time.time() * 1000 < 1
+        True
+        >>> TSID(1 << RANDOM_BITS).timestamp == TSID_EPOCH + 1
         True
         """
-        epoch = epoch or TSID_EPOCH
-        return epoch + timedelta(milliseconds=self.__number >> RANDOM_BITS)
+        return self._epoch + (self.__number >> RANDOM_BITS)
 
     @property
     def random(self) -> int:
         """Returns the random component of the TSID.
+           This compomnent contains the node and counter
+           bits.
 
         >>> TSID(0).random == 0
         True
@@ -102,7 +107,6 @@ class TSID:
     @property
     def number(self) -> int:
         """Converts the TSID into a 64-bit number.
-
            This simply unwraps the internal value
 
         >>> TSID(0xffff0000000000000000).number == 0
@@ -208,14 +212,15 @@ class TSID:
             case 'X':  # hexadecimal in upper case
                 result = encode(self.number, 16, min_length=TSID_BYTES*2)
             case 'x':  # hexadecimal in lower case
-                result = encode(self.number, 16, min_length=TSID_BYTES*2).lower()
+                result = encode(self.number, 16, min_length=TSID_BYTES*2)
+                result = result.lower()
             case 'd':  # base-10
                 result = encode(self.number, 10)
             case 'z':  # base-62
                 result = encode(self.number, 62)
             case _:
                 raise ValueError(f"Invalid format: '{fmt}'")
-        
+
         return result
 
     def _to_canonical_string(self) -> str:
@@ -242,10 +247,6 @@ class TSID:
         >>> b = TSID.create()
         >>> c = TSID.create()
         >>> a.number < b.number < c.number
-        True
-        >>> a.datetime == b.datetime == c.datetime
-        True
-        >>> a.random < b.random < c.random
         True
         """
         return _default_generator.create()
@@ -294,7 +295,7 @@ class TSID:
                 if len(value) != TSID_CHARS:
                     raise ValueError("Invalid TSID string")
                 number = sum(ALPHABET_VALUES[ord(value[i])] << h
-                            for i, h in enumerate(range(60, -5, -5), 0))
+                             for i, h in enumerate(range(60, -5, -5), 0))
             case 'X':  # hexadecimal in upper case
                 number = decode(value, 16)
             case 'x':  # hexadecimal in lower case
@@ -324,8 +325,8 @@ class TSIDGenerator:
         self,
         node: int | None = None,
         node_bits: int = TSID_DEFAULT_NODE_BITS,
-        epoch: datetime = TSID_EPOCH,
-        random_fn: t.Callable[[], int] | None = None
+        epoch: float = TSID_EPOCH,
+        random_fn: t.Callable[[int], int] | None = None
     ) -> None:
         """Creates a new TSID generator.
 
@@ -334,11 +335,11 @@ class TSIDGenerator:
                              within the range of `node_bits`.
         - `node_bits` int:   Number of bytes used to repesent the node id.
                              Defaults to `TSID_DEFAULT_NODE_BITS`.
-        - `epoch` datetime:  Epoch start. Defaults to `TSID_EPOCH`.
+        - `epoch` int:       Epoch start in milliseconds. Defaults to
+                             `TSID_EPOCH`.
         - `random_fn`:       Function to use to randomize the counter.
-                             Must return a 32-bit integer. If None, the
-                             stdlib `random.random()` is used to return a
-                             random integer.
+                             Must return a n-bit integer. If None, the
+                             stdlib `random.getrandbits()` is used.
 
         >>> generator = TSIDGenerator(node=1, node_bits=21)
         Traceback (most recent call last):
@@ -359,20 +360,17 @@ class TSIDGenerator:
         >>> generator.node
         1
         """
-
         if node is not None and node < 0:
             raise ValueError(f'Invalid node: {node}')
 
         if node_bits < 0 or node_bits > 20:
             raise ValueError(f'Invalid node_bits: {node_bits}')
 
-        self.random_fn = random_fn or (lambda: int(random() * 0xffffffff))
-
-        self.counter: int = self.random_fn()
+        self.random_fn = random_fn or random.getrandbits
 
         self.node: int
         if node is None:
-            self.node = int(random() * 0xffff) >> (20 - node_bits)
+            self.node = random.getrandbits(20) >> (20 - node_bits)
         else:
             self.node = node
 
@@ -380,11 +378,12 @@ class TSIDGenerator:
             raise ValueError(f'Node {self.node} too large for '
                              f'node_bits=={node_bits}')
 
+        self._epoch: float = epoch
         self._node_bits: int = node_bits
         self._counter_bits: int = RANDOM_BITS - node_bits
+        self.counter: int = self.random_fn(self._counter_bits)
 
-        self.epoch: datetime = epoch or TSID_EPOCH
-        self._millis: float = datetime.now().timestamp() * 1000
+        self._millis: float = time.time() * 1000
         self._counter_mask: int = RANDOM_MASK >> node_bits
         self._node_mask: int = RANDOM_MASK >> self._counter_bits
 
@@ -407,7 +406,7 @@ class TSIDGenerator:
         True
 
         >>> ### Test counter extraction ------------------------------
-        >>> tc = TSIDGenerator(node=64, node_bits=8, random_fn=lambda: 0)
+        >>> tc = TSIDGenerator(node=64, node_bits=8, random_fn=lambda n: 0)
         >>> t = tc.create()
         >>> t.number & tc._counter_mask == 1
         True
@@ -416,7 +415,7 @@ class TSIDGenerator:
         True
 
         >>> ### Test random extraction ------------------------------
-        >>> tc = TSIDGenerator(node=0, node_bits=0, random_fn=lambda: 0)
+        >>> tc = TSIDGenerator(node=0, node_bits=0, random_fn=lambda n: 0)
         >>> t = tc.create()
         >>> t.random == 1
         True
@@ -424,17 +423,26 @@ class TSIDGenerator:
         >>> t.random == 2
         True
 
-        >>> ### Test datetime extraction ------------------------------
-        >>> from datetime import datetime
+        >>> ### Test timestamp extraction ------------------------------
         >>> t = tc.create()
-        >>> (t.datetime - datetime.now()).total_seconds() < 1
+        >>> t.timestamp - (time.time() * 1000) <= 1
+        True
+
+        >>> ### Test custom epoch ------------------------------
+        >>> from datetime import datetime
+        >>> UNIX_EPOCH = datetime.fromisoformat('1970-01-01 00:00:00+00:00')
+        >>> EPOCH_MS = UNIX_EPOCH.timestamp() * 1000
+        >>> now_without_unix_epoch: float = time.time() * 1000 - EPOCH_MS
+        >>> tc = TSIDGenerator(node=0, epoch=0)
+        >>> t = tc.create()
+        >>> t.timestamp - now_without_unix_epoch <= 1
         True
         """
         with self._lock:
-            current_millis: float = datetime.now().timestamp() * 1000
+            current_millis: float = time.time() * 1000
 
             # If same millisecond, increment counter
-            if int(current_millis) == int(self._millis):
+            if current_millis - self._millis < 1:
                 self.counter += 1
 
                 # If the counter overflows, go to the next millisecond
@@ -443,12 +451,16 @@ class TSIDGenerator:
                     self.counter = 0
             else:
                 self._millis = current_millis
-                self.counter = self.random_fn() & self._counter_mask
+                rnd: int = self.random_fn(self._counter_bits)
+                self.counter = rnd & self._counter_mask
 
-            millis = int(self._millis - _TSID_EPOCH_MILLIS) << RANDOM_BITS
+            millis = int(self._millis - self._epoch) << RANDOM_BITS
             node = (self.node & self._node_mask) << self._counter_bits
             counter = self.counter & self._counter_mask
-            return TSID(millis + node + counter)
+
+            result = TSID(millis + node + counter)
+            result._epoch = self._epoch
+            return result
 
 
 _default_generator = TSIDGenerator(node_bits=0)
