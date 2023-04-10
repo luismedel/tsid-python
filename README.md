@@ -225,11 +225,11 @@ Convert a TSID into a canonical string in lower case:
 
 ---
 
-Get the creation `datetime` of a TSID:
+Get the creation `timestamp` of a TSID:
 
 ```python
->>> tsid.datetime
-datetime.datetime(2023, 4, 8, 12, 6, 58, 241000)
+>>> tsid.timestamp
+1680948418241.0  # datetime.datetime(2023, 4, 8, 12, 6, 58, 241000)
 ```
 
 ---
@@ -258,8 +258,8 @@ node: int = datacenter << 5 | worker
 epoch: datetime = datetime.fromisoformat('2010-11-04T01:42:54.657Z')
 
 twitter_generator: TSIDGenerator = TSIDGenerator(node=node, node_bits=10,
-                                                 epoch=epoch,
-                                                 random_fn=lambda: 0)
+                                                 epoch=epoch.timestamp() * 1000,
+                                                 random_fn=lambda n: 0)
 
 # use the generator
 tsid: TSID = twitter_generator.create()
@@ -282,7 +282,7 @@ node: int = worker << 5 | process
 epoch: datetime = datetime.fromisoformat("2015-01-01T00:00:00.000Z")
 
 discord_generator: TSIDGenerator = TSIDGenerator(node=node, node_bits=10,
-                                                 epoch=epoch)
+                                                 epoch=epoch.timestamp() * 1000)
 
 # use the generator
 tsid: TSID = discord_generator.create()
@@ -327,6 +327,7 @@ gen8 = TSIDGenerator(node=8, node_bis=3)
 
 | Language | Name |
 | -------- | ---- |
+| Java (by original author)     | [f4b6a3/tsid-creator](https://github.com/f4b6a3/tsid-creator) |
 | Java     | [vladmihalcea/hypersistence-tsid](https://github.com/vladmihalcea/hypersistence-tsid) |
 | .NET     | [kgkoutis/TSID.Creator.NET](https://github.com/kgkoutis/TSID.Creator.NET) |
 | PHP      | [odan/tsid](https://github.com/odan/tsid) |
