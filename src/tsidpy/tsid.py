@@ -11,6 +11,7 @@ from .basen import decode, encode
 
 TSID_BYTES: int = 8
 TSID_CHARS: int = 13
+TSID_HEXCHARS: int = 16
 
 _EPOCH_ISO: str = '2020-01-01 00:00:00+00:00'
 TSID_EPOCH: float = datetime.fromisoformat(_EPOCH_ISO).timestamp() * 1000
@@ -200,6 +201,12 @@ class TSID:
         >>> t = TSID(0x000000000000000a)
         >>> t.to_string()
         '000000000000A'
+
+        >>> t = TSID(437283649808777971)
+        >>> t.to_string('d')
+        '437283649808777971'
+        >>> t.to_string('z')
+        'WIlLsHwljH'
         """
 
         result: str
@@ -265,7 +272,7 @@ class TSID:
         True
         """
         if len(bytes) != TSID_BYTES:
-            raise ValueError(f'Invalid TSID bytes (len {len(bytes)}, '
+            raise ValueError(f'Invalid TSID bytes (len={len(bytes)} bytes, '
                              f'expected {TSID_BYTES})')
 
         number: int = int.from_bytes(bytes, byteorder='big', signed=False)
@@ -293,12 +300,22 @@ class TSID:
         match fmt:
             case 'S' | 's':
                 if len(value) != TSID_CHARS:
-                    raise ValueError("Invalid TSID string")
+                    raise ValueError(f'Invalid TSID string: '
+                                     f'(len={len(value)} chars, '
+                                     f'but expected {TSID_CHARS})')
                 number = sum(ALPHABET_VALUES[ord(value[i])] << h
                              for i, h in enumerate(range(60, -5, -5), 0))
             case 'X':  # hexadecimal in upper case
+                if len(value) != TSID_HEXCHARS:
+                    raise ValueError(f'Invalid TSID string: '
+                                     f'(len={len(value)} chars, '
+                                     f'but expected {TSID_HEXCHARS})')
                 number = decode(value, 16)
             case 'x':  # hexadecimal in lower case
+                if len(value) != TSID_HEXCHARS:
+                    raise ValueError(f'Invalid TSID string: '
+                                      f'(len={len(value)} chars, '
+                                     f'but expected {TSID_HEXCHARS})')
                 number = decode(value.upper(), 16)
             case 'd':  # base-10
                 number = decode(value, 10)
