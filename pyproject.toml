@@ -16,7 +16,11 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
+    "Typing :: Typed",
 ]
 
 [project.urls]
 "Homepage" = "https://github.com/luismedel/tsid-python"
+
+[tool.setuptools.package-data]
+tsidpy = ["py.typed"]
