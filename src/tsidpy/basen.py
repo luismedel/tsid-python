@@ -1,4 +1,6 @@
 
+import typing as t
+
 # Base 62
 ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
@@ -6,9 +8,9 @@ ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 def encode(
     value: int,
     base: int,
-    min_length: int | None = None
+    min_length: t.Optional[int] = None
 ) -> str:
-    result: list[str] = []
+    result: t.List[str] = []
 
     while True:
         result.append(ALPHABET[value % base])
