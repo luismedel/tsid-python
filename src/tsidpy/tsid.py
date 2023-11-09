@@ -91,6 +91,16 @@ class TSID:
         return self._epoch + (self.__number >> RANDOM_BITS)
 
     @property
+    def datetime(self) -> datetime:
+        """Datetime corresponding with the tiimestamp component
+           of the TSID.
+
+        >>> TSID(0).datetime == datetime.fromtimestamp(TSID_EPOCH / 1000)
+        True
+        """
+        return datetime.fromtimestamp(self.timestamp / 1000)
+
+    @property
     def random(self) -> int:
         """Returns the random component of the TSID.
            This compomnent contains the node and counter
