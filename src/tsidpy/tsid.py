@@ -22,7 +22,7 @@ RANDOM_MASK: int = 0x3fffff
 TSID_DEFAULT_NODE_BITS = 10
 
 ALPHABET: str = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
-ALPHABET_VALUES: list[int] = [-1 for _ in range(128)]
+ALPHABET_VALUES: t.List[int] = [-1 for _ in range(128)]
 
 
 def __set_alphabet_values(chars: str, start: int) -> None:
@@ -211,22 +211,21 @@ class TSID:
 
         result: str
 
-        match fmt:
-            case 'S':  # canonical string in upper case
-                result = self._to_canonical_string()
-            case 's':  # canonical string in lower case
-                result = self._to_canonical_string().lower()
-            case 'X':  # hexadecimal in upper case
-                result = encode(self.number, 16, min_length=TSID_BYTES*2)
-            case 'x':  # hexadecimal in lower case
-                result = encode(self.number, 16, min_length=TSID_BYTES*2)
-                result = result.lower()
-            case 'd':  # base-10
-                result = encode(self.number, 10)
-            case 'z':  # base-62
-                result = encode(self.number, 62)
-            case _:
-                raise ValueError(f"Invalid format: '{fmt}'")
+        if fmt == 'S':  # canonical string in upper case
+            result = self._to_canonical_string()
+        elif fmt == 's':  # canonical string in lower case
+            result = self._to_canonical_string().lower()
+        elif fmt == 'X':  # hexadecimal in upper case
+            result = encode(self.number, 16, min_length=TSID_BYTES*2)
+        elif fmt == 'x':  # hexadecimal in lower case
+            result = encode(self.number, 16, min_length=TSID_BYTES*2)
+            result = result.lower()
+        elif fmt == 'd':  # base-10
+            result = encode(self.number, 10)
+        elif fmt == 'z':  # base-62
+            result = encode(self.number, 62)
+        else:
+            raise ValueError(f"Invalid format: '{fmt}'")
 
         return result
 
@@ -297,32 +296,31 @@ class TSID:
         """
         number: int
 
-        match fmt:
-            case 'S' | 's':
-                if len(value) != TSID_CHARS:
-                    raise ValueError(f'Invalid TSID string: '
-                                     f'(len={len(value)} chars, '
-                                     f'but expected {TSID_CHARS})')
-                number = sum(ALPHABET_VALUES[ord(value[i])] << h
-                             for i, h in enumerate(range(60, -5, -5), 0))
-            case 'X':  # hexadecimal in upper case
-                if len(value) != TSID_HEXCHARS:
-                    raise ValueError(f'Invalid TSID string: '
-                                     f'(len={len(value)} chars, '
-                                     f'but expected {TSID_HEXCHARS})')
-                number = decode(value, 16)
-            case 'x':  # hexadecimal in lower case
-                if len(value) != TSID_HEXCHARS:
-                    raise ValueError(f'Invalid TSID string: '
-                                      f'(len={len(value)} chars, '
-                                     f'but expected {TSID_HEXCHARS})')
-                number = decode(value.upper(), 16)
-            case 'd':  # base-10
-                number = decode(value, 10)
-            case 'z':  # base-62
-                number = decode(value, 62)
-            case _:
-                raise ValueError(f"Invalid format: '{fmt}'")
+        if fmt == 'S' or fmt == 's':
+            if len(value) != TSID_CHARS:
+                raise ValueError(f'Invalid TSID string: '
+                                    f'(len={len(value)} chars, '
+                                    f'but expected {TSID_CHARS})')
+            number = sum(ALPHABET_VALUES[ord(value[i])] << h
+                            for i, h in enumerate(range(60, -5, -5), 0))
+        elif fmt == 'X':  # hexadecimal in upper case
+            if len(value) != TSID_HEXCHARS:
+                raise ValueError(f'Invalid TSID string: '
+                                    f'(len={len(value)} chars, '
+                                    f'but expected {TSID_HEXCHARS})')
+            number = decode(value, 16)
+        elif fmt == 'x':  # hexadecimal in lower case
+            if len(value) != TSID_HEXCHARS:
+                raise ValueError(f'Invalid TSID string: '
+                                    f'(len={len(value)} chars, '
+                                    f'but expected {TSID_HEXCHARS})')
+            number = decode(value.upper(), 16)
+        elif fmt == 'd':  # base-10
+            number = decode(value, 10)
+        elif fmt == 'z':  # base-62
+            number = decode(value, 62)
+        else:
+            raise ValueError(f"Invalid format: '{fmt}'")
 
         return TSID(number)
 
@@ -340,10 +338,10 @@ class TSID:
 class TSIDGenerator:
     def __init__(
         self,
-        node: int | None = None,
+        node: t.Optional[int] = None,
         node_bits: int = TSID_DEFAULT_NODE_BITS,
         epoch: float = TSID_EPOCH,
-        random_fn: t.Callable[[int], int] | None = None
+        random_fn: t.Optional[t.Callable[[int], int]] = None
     ) -> None:
         """Creates a new TSID generator.
 
