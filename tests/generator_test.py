@@ -20,7 +20,7 @@ def print_tsid(t: TSID) -> None:
 
 
 if __name__ == '__main__':
-    g: TSIDGenerator()
+    g = TSIDGenerator()
     for _ in range(10):
         print_tsid(g.create())
     time.sleep(0.1)
