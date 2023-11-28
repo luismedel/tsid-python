@@ -74,6 +74,27 @@ class TSID:
         """
         self.__number: int = number & 0xffffffffffffffff  # 64-bit
         self._epoch: float = TSID_EPOCH
+    
+    def __hash__(self) -> int:
+        """
+        >>> hash(TSID(0))
+        0
+        >>> hash(TSID(1))
+        1
+        >>> hash(TSID(0xffffffffffffffff)) == hash(0xffffffffffffffff)
+        True
+        >>> d = dict()
+        >>> d[TSID(0)] = 0
+        >>> d[TSID(1)] = 1
+        >>> d[TSID(0xffffffffffffffff)] = "big"
+        >>> d[TSID(0)]
+        0
+        >>> d[TSID(1)]
+        1
+        >>> d[TSID(0xffffffffffffffff)]
+        'big'
+        """
+        return self.__number.__hash__()
 
     @property
     def timestamp(self) -> float:
