@@ -323,16 +323,23 @@ gen8 = TSIDGenerator(node=8, node_bis=3)
 
 ## Other ports, forks and OSS
 
-### Ports and forks
+Ports, forks, implementations and other OSS
+------------------------------------------------------
+
+Ports, forks and implementations:
 
 | Language | Name |
 | -------- | ---- |
-| Java (by original author)     | [f4b6a3/tsid-creator](https://github.com/f4b6a3/tsid-creator) |
+| Go       | [vishal-bihani/go-tsid](https://github.com/vishal-bihani/go-tsid) |
 | Java     | [vladmihalcea/hypersistence-tsid](https://github.com/vladmihalcea/hypersistence-tsid) |
+| Java     | [vincentdaogithub/tsid](https://github.com/vincentdaogithub/tsid) |
 | .NET     | [kgkoutis/TSID.Creator.NET](https://github.com/kgkoutis/TSID.Creator.NET) |
 | PHP      | [odan/tsid](https://github.com/odan/tsid) |
+| Python   | [luismedel/tsid-python](https://github.com/luismedel/tsid-python) |
+| Rust     | [jakudlaty/tsid](https://github.com/jakudlaty/tsid)
+| TypeScript  | [yubintw/tsid-ts](https://github.com/yubinTW/tsid-ts) |
 
-### OSS
+Other OSS:
 
 | Language | Name |
 | -------- | ---- |
