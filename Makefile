@@ -2,6 +2,12 @@
 clean:
 	rm -rf dist build tsidpy.egg-info
 
+tests:
+	python3 -m pytest --doctest-modules src/tsidpy tests -m "not perf"
+
+bench:
+	python3 -m pytest tests -m perf --run-perf -s
+
 build:
 	python3 -m build
 

@@ -3,6 +3,7 @@ import typing as t
 
 # Base 62
 ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+ALPHABET_INDEX = {char: index for index, char in enumerate(ALPHABET)}
 
 
 def encode(
@@ -29,6 +30,6 @@ def decode(value: str, base: int) -> int:
 
     for c in value:
         result *= base
-        result += ALPHABET.index(c)
+        result += ALPHABET_INDEX[c]
 
     return result

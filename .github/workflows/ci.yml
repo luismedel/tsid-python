@@ -9,10 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  deploy:
-
+  mypy:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
@@ -26,7 +24,26 @@ jobs:
       run: |
         pip install mypy
         mypy --python-version 3.7 src/
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Update pip
+      run: |
+        python -m pip install --upgrade pip
+    - name: Install package and test dependencies
+      run: |
+        pip install -e .[test]
     - name: Test
       run: |
-        pip install pytest
-        pytest src/tsidpy/*.py --doctest-modules
+        pytest --doctest-modules src/tsidpy tests -m "not perf"

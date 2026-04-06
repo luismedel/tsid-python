@@ -26,14 +26,6 @@ jobs:
     - name: Update pip
       run: |
         python -m pip install --upgrade pip
-    - name: Mypy check
-      run: |
-        pip install mypy
-        mypy --python-version 3.7 src/
-    - name: Test
-      run: |
-        pip install pytest
-        pytest src/tsidpy/*.py --doctest-modules
     - name: Build package
       run: |
         pip install build

@@ -19,8 +19,23 @@ classifiers = [
     "Typing :: Typed",
 ]
 
+[project.optional-dependencies]
+test = [
+  "pytest>=7.0",
+]
+
 [project.urls]
 "Homepage" = "https://github.com/luismedel/tsid-python"
 
 [tool.setuptools.package-data]
 tsidpy = ["py.typed"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers"
+doctest_optionflags = ["ELLIPSIS"]
+markers = [
+  "perf: opt-in performance and benchmark tests",
+]
+testpaths = [
+  "tests",
+]

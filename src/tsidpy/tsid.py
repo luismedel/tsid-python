@@ -247,10 +247,9 @@ class TSID:
         elif fmt == 's':  # canonical string in lower case
             result = self._to_canonical_string().lower()
         elif fmt == 'X':  # hexadecimal in upper case
-            result = encode(self.number, 16, min_length=TSID_BYTES*2)
+            result = format(self.number, '016X')
         elif fmt == 'x':  # hexadecimal in lower case
-            result = encode(self.number, 16, min_length=TSID_BYTES*2)
-            result = result.lower()
+            result = format(self.number, '016x')
         elif fmt == 'd':  # base-10
             result = encode(self.number, 10)
         elif fmt == 'z':  # base-62
@@ -339,13 +338,13 @@ class TSID:
                 raise ValueError(f'Invalid TSID string: '
                                     f'(len={len(value)} chars, '
                                     f'but expected {TSID_HEXCHARS})')
-            number = decode(value, 16)
+            number = int(value, 16)
         elif fmt == 'x':  # hexadecimal in lower case
             if len(value) != TSID_HEXCHARS:
                 raise ValueError(f'Invalid TSID string: '
                                     f'(len={len(value)} chars, '
                                     f'but expected {TSID_HEXCHARS})')
-            number = decode(value.upper(), 16)
+            number = int(value, 16)
         elif fmt == 'd':  # base-10
             number = decode(value, 10)
         elif fmt == 'z':  # base-62
@@ -425,15 +424,21 @@ class TSIDGenerator:
                              f'node_bits=={node_bits}')
 
         self._epoch: float = epoch
+        self._epoch_millis: int = int(epoch)
         self._node_bits: int = node_bits
         self._counter_bits: int = RANDOM_BITS - node_bits
         self.counter: int = self.random_fn(self._counter_bits)
 
-        self._millis: float = time.time() * 1000
+        self._millis: int = self._current_millis()
         self._counter_mask: int = RANDOM_MASK >> node_bits
         self._node_mask: int = RANDOM_MASK >> self._counter_bits
+        self._node_value: int = (self.node & self._node_mask) << self._counter_bits
 
         self._lock = threading.Lock()
+
+    @staticmethod
+    def _current_millis() -> int:
+        return int(time.time() * 1000)
 
     def create(self) -> TSID:
         """
@@ -485,10 +490,10 @@ class TSIDGenerator:
         True
         """
         with self._lock:
-            current_millis: float = time.time() * 1000
+            current_millis: int = self._current_millis()
 
             # If same millisecond, increment counter
-            if current_millis - self._millis < 1:
+            if current_millis - self._millis <= 1:
                 self.counter += 1
 
                 # If the counter overflows, go to the next millisecond
@@ -500,13 +505,13 @@ class TSIDGenerator:
                 rnd: int = self.random_fn(self._counter_bits)
                 self.counter = rnd & self._counter_mask
 
-            millis = int(self._millis - self._epoch) << RANDOM_BITS
-            node = (self.node & self._node_mask) << self._counter_bits
+            millis = self._millis
             counter = self.counter & self._counter_mask
 
-            result = TSID(millis + node + counter)
-            result._epoch = self._epoch
-            return result
+        millis_value = (millis - self._epoch_millis) << RANDOM_BITS
+        result = TSID(millis_value + self._node_value + counter)
+        result._epoch = self._epoch
+        return result
 
 
 _default_generator = TSIDGenerator(node_bits=0)
